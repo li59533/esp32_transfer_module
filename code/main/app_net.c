@@ -161,7 +161,7 @@ APP_Net_Param_t APP_Net_Param =
 
 void APP_Net_Init(void)
 {
-    APP_Net_Param.Cur_Mode = g_SystemParam_Config.Net_Mode;
+    APP_Net_Param.Cur_Mode = g_SystemParam_Config.workingmode;
 
     APP_Net_UDP_SendQueue_Init();
     Net_Task_Event_Start(NET_TASK_STA_EVENT,EVENT_FROM_TASK);
