@@ -31,7 +31,7 @@
 #define UART_TASK_TEST_EVENT 			(0X01 << 0)
 #define UART_TASK_TEST2_EVENT			(0X01 << 1)
 #define UART_TASK_INIT_EVENT            (0X01 << 2)
-
+#define UART_TASK_SEND_EVENT            (0X01 << 3)
 
 /**
  * @}

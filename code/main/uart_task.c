@@ -171,7 +171,7 @@ void Uart_Task(void * pvParameter)
 		{
 			DEBUG("Uart Task UART_TASK_TEST2_EVENT\r\n");
             APP_Uart_TestCode();
-        }		
+        }
         
 		if((event_flag & UART_TASK_INIT_EVENT) != 0x00)
 		{
@@ -179,7 +179,13 @@ void Uart_Task(void * pvParameter)
             APP_Uart_Init();
             Uart_Task_Event_Start(UART_TASK_TEST2_EVENT , EVENT_FROM_TASK);
 		}				
-		
+
+		if((event_flag & UART_TASK_SEND_EVENT) != 0x00)
+		{
+			DEBUG("Uart Task SEND EVENT\r\n");            
+            APP_Uart_Send_Task();
+		}			
+        
 	}
 	
 }
@@ -202,9 +208,6 @@ void Uart_Task_Event_Start(uint32_t events, uint8_t event_from)
 		default:break;
 	}
 }
-
-
-
 
 void Uart_Task_Tim_Init(void)
 {

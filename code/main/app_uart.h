@@ -64,7 +64,8 @@
  * @{  
  */
 void APP_Uart_Init(void);
-void APP_Uart_SendBytes(uint8_t * buf , uint16_t len);
+void APP_Uart_Send_Task(void);
+void APP_Uart_EnterSendQueue(uint8_t *buf , uint16_t len );
 void APP_Uart_RevProcess(void);
 // -------------------Test Code --------------------------
 

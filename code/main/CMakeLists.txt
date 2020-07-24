@@ -9,5 +9,6 @@ idf_component_register(SRCS "main.c"
                             "app_uart.c"
                             "uart_task.c"
                             "version.c"
+                            "app_protocol.c"
                     INCLUDE_DIRS "")
 
