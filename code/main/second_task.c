@@ -21,6 +21,7 @@
  */
 
 #include "app_net.h"
+#include "app_uart.h"
 
 /**
  * @addtogroup    second_task_Modules 
@@ -134,7 +135,8 @@ void Second_Task(void * pvParameter)
 	{
 		DEBUG("Second Task Looping\r\n");
 		vTaskDelay(pdMS_TO_TICKS(1000));
-        APP_Net_UDP_TestCode();
+        //APP_Net_UDP_TestCode();
+        //APP_Uart_TestCode();
 	}
 	
 }

@@ -24,6 +24,8 @@
 #include "driver/gpio.h"
 #include "clog.h"
 
+#include "rtos_tools.h"
+
 /**
  * @addtogroup    app_uart_Modules 
  * @{  
@@ -44,6 +46,15 @@
  * @brief         
  * @{  
  */
+#define TXD_PIN (GPIO_NUM_4)
+#define RXD_PIN (GPIO_NUM_5)
+
+#define RX_BUF_SIZE  2048
+
+#define APP_UART_R_RINGBUF_LEN          0x3c00    // 15k
+
+#define APP_UART_DEFAULT_BUADRATE       3000000 // MAX IS 5Mbps
+
 
 /**
  * @}
@@ -65,6 +76,16 @@
  * @{  
  */
 
+typedef struct 
+{
+    uint8_t *buf;
+    uint16_t in;
+    uint16_t out;
+    uint16_t count;
+    uint16_t size;
+    /* data */
+}APP_Uart_R_Queue_t;
+
 /**
  * @}
  */
@@ -75,6 +96,15 @@
  * @{  
  */
 
+static uint8_t app_uart_r_ringbuf[APP_UART_R_RINGBUF_LEN];
+static APP_Uart_R_Queue_t APP_Uart_R_Queue = 
+{
+    .buf = app_uart_r_ringbuf,
+    .in = 0,
+    .out = 0,
+    .count = 0,
+    .size = APP_UART_R_RINGBUF_LEN,
+};
 /**
  * @}
  */
@@ -104,15 +134,13 @@
  * @brief         
  * @{  
  */
-#define TXD_PIN (GPIO_NUM_4)
-#define RXD_PIN (GPIO_NUM_5)
 
-static const int RX_BUF_SIZE = 2048;
+
 
 void APP_Uart_Init(void)
 {
     const uart_config_t uart_config = {
-    .baud_rate = 115200,//115200,
+    .baud_rate = APP_UART_DEFAULT_BUADRATE,//115200,
     .data_bits = UART_DATA_8_BITS,
     .parity = UART_PARITY_DISABLE,
     .stop_bits = UART_STOP_BITS_1,
@@ -121,7 +149,7 @@ void APP_Uart_Init(void)
     ESP_ERROR_CHECK(uart_param_config(UART_NUM_1, &uart_config));
     uart_set_pin(UART_NUM_1, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     // We won't use a buffer for sending data.
-    uart_driver_install(UART_NUM_1, 2048, 0, 0, NULL, 0);    
+    uart_driver_install(UART_NUM_1, APP_UART_R_RINGBUF_LEN, 0, 0, NULL, 0);    
 
     // -----------interrupt-----------------
     //esp_err_t uart_enable_intr_mask(uart_port_t uart_num, uint32_t enable_mask)
@@ -142,29 +170,32 @@ void APP_Uart_RevProcess(void)
     esp_log_level_set(RX_TASK_TAG, ESP_LOG_INFO);
     uint8_t* data = (uint8_t*) malloc(RX_BUF_SIZE+1);
     while (1) {
-        const int rxBytes = uart_read_bytes(UART_NUM_1, data, RX_BUF_SIZE, 1000 / portTICK_RATE_MS);
+        const int rxBytes = uart_read_bytes(UART_NUM_1, data, RX_BUF_SIZE * 10, 1000 / portTICK_RATE_MS);
         if (rxBytes > 0) {
             data[rxBytes] = 0;
             ESP_LOGI(RX_TASK_TAG, "Read %d ", rxBytes);
             DEBUG("-------------------\n");
-            ESP_LOG_BUFFER_HEXDUMP(RX_TASK_TAG, data, rxBytes, ESP_LOG_INFO);
+            //ESP_LOG_BUFFER_HEXDUMP(RX_TASK_TAG, data, rxBytes, ESP_LOG_INFO);
         }
     }
     free(data);
 }
 
-
 // -------------------Test Code --------------------------
+
+uint8_t buf[APP_UART_R_RINGBUF_LEN] = {0};
 
 void APP_Uart_TestCode(void)
 {
-    uint8_t buf[1024] = {0};
+    
 
-    for(uint16_t i = 0 ; i < 1024 ; i ++)
+    for(uint16_t i = 0 ; i < APP_UART_R_RINGBUF_LEN ; i ++)
     {
         buf[i] = i;
     }
 
+    APP_Uart_SendBytes(buf , sizeof(buf));
+    RTOS_Delay_ms(1);
     APP_Uart_SendBytes(buf , sizeof(buf));
 }
 
@@ -178,7 +209,7 @@ void APP_Uart_TestCode2(void)
         const int rxBytes = uart_read_bytes(UART_NUM_1, data, RX_BUF_SIZE, 1000 / portTICK_RATE_MS);
         if (rxBytes > 0) {
             data[rxBytes] = 0;
-            ESP_LOGI(RX_TASK_TAG, "Read %d ", rxBytes);
+            ESP_LOGI(RX_TASK_TAG, "Read %x ", rxBytes);
             DEBUG("-------------------\n");
             ESP_LOG_BUFFER_HEXDUMP(RX_TASK_TAG, data, rxBytes, ESP_LOG_INFO);
         }
