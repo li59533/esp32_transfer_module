@@ -67,7 +67,7 @@ typedef struct
     uint32_t local_ip;
     uint16_t local_port;
     uint16_t local_conf_port;
-
+    uint32_t netmask;
 }SystemParam_Config_t;
 
 /**

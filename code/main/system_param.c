@@ -12,7 +12,7 @@
  */
 #include "self_def.h"
 #include "system_param.h"
-
+#include "app_protocol.h"
 /**
  * @addtogroup    XXX 
  * @{  
@@ -70,7 +70,7 @@ const char storage_name_target_port[]     = "target_port";
 const char storage_name_local_ip[]        = "local_ip";
 const char storage_name_local_port[]      = "local_port";
 const char storage_name_local_conf_port[] = "local_conf_port";
-
+const char storage_name_netmask[]         = "netmask";
 
 const char sys_default_ssid[]       = "Bigym";
 const char sys_default_password[]   = "1234567890";
@@ -101,17 +101,17 @@ nvs_handle_t nvs_sys_handle;
 static SystemParam_Config_t SystemParam_Config_Default = 
 {
 
-    .workingmode = 0x00,
-    .dhcp_flag =0x00,
+    .workingmode = WorkingMode_TCP,
+    .dhcp_flag = DHCP_F_CLOSE,
     .DNS = 0x08080808,
-    .gateway = 0xc0a80201, // 192.168.2.1
-    .domainname_flag = 0x00,
-    .target_ip = 0xc0a00266, // 192.168.2.102
+    .gateway = 0x0102a8c0, // 192.168.2.1 0102a8c0
+    .domainname_flag = DOMAIN_F_CLOSE,
+    .target_ip = 0x6502a8c0, // 192.168.2.102
     .target_port = 20000 , 
-    .local_ip = 0xc0a802c8 , //192.168.2.200
+    .local_ip = 0xc802a8c0 , //192.168.2.200
     .local_port = 0, // random port if value equal 0
     .local_conf_port = SYS_UDP_CONF_PORT , 
-
+    .netmask = 0x00ffffff,
 };
 /**
  * @}
@@ -256,7 +256,10 @@ int16_t SystemParam_Read(void)
         err = nvs_get_u16(nvs_sys_handle, storage_name_local_conf_port, &g_SystemParam_Config.local_conf_port);
         printf("local conf port err:%d\n" , err);
         // ---------------------------------
-        
+        // ----------- netmask -------------
+        err = nvs_get_u32(nvs_sys_handle, storage_name_netmask, &g_SystemParam_Config.netmask);
+        printf("netmask err:%d\n" , err);
+        // ---------------------------------
         nvs_close(nvs_sys_handle);
 
 
@@ -276,7 +279,7 @@ int16_t SystemParam_Read(void)
                 printf("local ip :%x\n" , g_SystemParam_Config.local_ip);
                 printf("local port:%d\n" , g_SystemParam_Config.local_port);
                 printf("local conf port:%d\n" ,g_SystemParam_Config.local_conf_port );
-
+                printf("netmask :%x\n" ,g_SystemParam_Config.netmask );
                 printf("Read System OK\n");
                 break;
             case ESP_ERR_NVS_NOT_FOUND:
@@ -348,7 +351,9 @@ void SystemParam_Rest(void)
         // ---------- local conf port ---
         err = nvs_set_u16(nvs_sys_handle, storage_name_local_conf_port, g_SystemParam_Config.local_conf_port);
         // ------------------------------
-
+        // ---------- netmask -----------
+        err = nvs_set_u32(nvs_sys_handle, storage_name_netmask, g_SystemParam_Config.netmask);
+        // ------------------------------
         printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
 
         // Commit written value.
@@ -421,6 +426,9 @@ void SystemParam_Save(void)
         // ------------------------------
         // ---------- local conf port ---
         err = nvs_set_u16(nvs_sys_handle, storage_name_local_conf_port, g_SystemParam_Config.local_conf_port);
+        // ------------------------------
+        // ---------- netmask -----------
+        err = nvs_set_u32(nvs_sys_handle, storage_name_netmask, g_SystemParam_Config.netmask);
         // ------------------------------
 
         printf((err != ESP_OK) ? "Failed!\n" : "Done\n");

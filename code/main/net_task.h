@@ -32,7 +32,7 @@
 #define NET_TASK_TEST2_EVENT			(0X01 << 1)
 
 #define NET_TASK_INIT_EVENT             (0X01 << 2)
-#define NET_TASK_STA_EVENT              (0X01 << 3)
+#define NET_TASK_TCP_EVENT              (0X01 << 3)
 #define NET_TASK_UDP_EVENT              (0x01 << 4)
 #define NET_TASK_UDP_SEND_EVENT         (0X01 << 5)
 

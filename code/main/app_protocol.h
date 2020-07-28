@@ -50,6 +50,19 @@
 #pragma pack (1)
 typedef struct
 {
+	uint8_t Tag;
+	uint8_t Len;
+	union 
+	{
+		uint8_t BIT_8;
+		uint16_t BIT_16;
+		uint32_t BIT_32;
+		uint8_t Array[20];
+	}Value;
+}APP_Protocol_Tlv_t;
+
+typedef struct
+{
     uint8_t head;
     uint16_t len;
     uint16_t inf;
@@ -76,6 +89,50 @@ typedef enum
 
 }APP_Protocol_CMD_e;
 
+
+typedef enum
+{
+    TAG_CONF_WORKINGMODE    = 0X00,
+    TAG_CONF_SSID           = 0X01,
+    TAG_CONF_PASSWORD       = 0X02,
+    TAG_CONF_DHCP_FLAG      = 0X03,
+    TAG_CONF_DNS            = 0X04,
+    TAG_CONF_GATEWAY        = 0X05,
+    TAG_CONF_DOMAINNAME_FLAG= 0X06,
+    TAG_CONF_DOMAINNAME     = 0X07,
+    TAG_CONF_TARGET_IP      = 0X08,
+    TAG_CONF_TARGET_PORT    = 0X09,
+    TAG_CONF_LOCAL_IP       = 0X0A,
+    TAG_CONF_LOCAL_PORT     = 0X0B,
+    TAG_CONF_LOCAL_CONF_PORT= 0X0C,
+}APP_Protocol_ConfTag_e;
+
+
+typedef enum
+{
+    CONF_SUCCEED = 0x00,
+    CONF_FAIL = 0X01,
+}APP_Protocol_Confstatus_e;
+
+
+typedef enum
+{
+    WorkingMode_TCP = 1,
+    WorkingMode_UDP ,
+    WorkingMode_AP ,
+}APP_Protocol_WorkingMode_e;
+
+typedef enum
+{
+    DHCP_F_OPEN = 1,
+    DHCP_F_CLOSE ,
+}APP_Protocol_DHCP_Flag_e;
+
+typedef enum
+{
+    DOMAIN_F_OPEN = 1,
+    DOMAIN_F_CLOSE ,
+}APP_Protocol_Domain_Flag_e;
 /**
  * @}
  */
@@ -94,6 +151,7 @@ typedef enum
  * @{  
  */
 void APP_Protocol_P2P_Process(uint8_t *buf , uint16_t len);
+uint8_t APP_Protocol_AddTlv(uint8_t * disaddr,APP_Protocol_Tlv_t * tlv_value);
 /**
  * @}
  */

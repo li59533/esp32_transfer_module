@@ -170,7 +170,7 @@ void Uart_Task(void * pvParameter)
 		if((event_flag & UART_TASK_TEST2_EVENT) != 0x00)
 		{
 			DEBUG("Uart Task UART_TASK_TEST2_EVENT\r\n");
-            APP_Uart_TestCode();
+            //APP_Uart_TestCode();
         }
         
 		if((event_flag & UART_TASK_INIT_EVENT) != 0x00)

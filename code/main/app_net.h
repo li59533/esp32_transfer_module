@@ -18,6 +18,8 @@
  * @{ 
  */
 #include "self_def.h"
+#include "app_protocol.h"
+#include "system_param.h"
 /**
  * @addtogroup    app_net_Modules 
  * @{  
@@ -45,7 +47,23 @@
  * @defgroup      app_net_Exported_Types 
  * @{  
  */
-
+typedef struct 
+{
+    uint8_t workingmode ;
+    char ssid[SYS_SSID_MAX];
+    char password[SYS_PASSWORD_MAX];
+    uint8_t dhcp_flag;
+    uint32_t DNS;
+    uint32_t gateway;
+    uint8_t domainname_flag;
+    char domain_name[SYS_DOMAIN_NAME_MAX];
+    uint32_t target_ip;
+    uint16_t target_port;
+    uint32_t local_ip;
+    uint16_t local_port;
+    uint16_t local_conf_port;
+    uint32_t netmask;
+}APP_Net_Param_t;
 /**
  * @}
  */
@@ -65,6 +83,7 @@
  */
 void APP_Net_Init(void);
 void APP_NET_STA(void);
+void APP_Net_TCPProcess(void);
 void APP_Net_UDPProcess(void);
 void APP_Net_UDPSend_Process(void);
 

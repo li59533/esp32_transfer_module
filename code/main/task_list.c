@@ -112,7 +112,7 @@ void RTOS_Init(void)
 	basetype = First_Task_Init();
 	basetype = Second_Task_Init();	
 	basetype = Net_Task_Init();
-    basetype = Uart_Task_Init();
+    //basetype = Uart_Task_Init();
 
 	if(pdPASS == basetype)
 	{
@@ -121,7 +121,7 @@ void RTOS_Init(void)
 	else
 	{
 		while(1)
-		{
+            {
 			blockling_delay();
 			DEBUG("RTOS is not start\r\n");
 		}

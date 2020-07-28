@@ -115,9 +115,9 @@ uint32_t Net_Task_Init(void)
 
         basetype = xTaskCreatePinnedToCore(Net_Task,\
 							"Net Task",\
-							4096,
+							8192,
 							NULL,
-							 2 ,
+							 configMAX_PRIORITIES -1 ,
 							&Net_Task_Handle,
                             tskNO_AFFINITY);
 
@@ -176,12 +176,12 @@ void Net_Task(void * pvParameter)
 			DEBUG("Net Task INIT EVENT\r\n");
 
 		}				
-		if((event_flag & NET_TASK_STA_EVENT) != 0x00)
+        
+        if((event_flag & NET_TASK_TCP_EVENT) != 0x00)
 		{
-            APP_NET_STA();
-			DEBUG("Net Task STA EVENT\r\n");
-
-		}		
+			DEBUG("Net Task TCP EVENT\r\n");
+            APP_Net_TCPProcess();
+		}			
         if((event_flag & NET_TASK_UDP_EVENT) != 0x00)
 		{
 			DEBUG("Net Task UDP EVENT\r\n");

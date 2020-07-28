@@ -20,7 +20,7 @@
 #include "esp_wifi.h"
 #include "esp_log.h"
 #include "esp_event.h"
-#include "system_param.h"
+
 #include "net_task.h"
 #include "clog.h"
 
@@ -56,8 +56,6 @@
 #define SOCKET_CONF      1
 #define SOCKET_NUM_COUNT 2
 
-
-#define SOCKET_CONF_PORT  26601
 /**
  * @}
  */
@@ -123,6 +121,9 @@ APP_Net_UDPSendQueue_t APP_Net_UDPSendQueue[APP_NET_UDPSEND_QUEUE_NUM] =
     }
 
 };
+
+APP_Net_Param_t APP_Net_Param ;
+
 /**
  * @}
  */
@@ -133,6 +134,10 @@ APP_Net_UDPSendQueue_t APP_Net_UDPSendQueue[APP_NET_UDPSEND_QUEUE_NUM] =
  * @{  
  */
 static esp_err_t event_handler(void *ctx, system_event_t *event);
+static void app_net_TCPMode(void);
+static void app_net_UDPMode(void);
+static void app_net_APMode(void);
+static void app_net_connectAP(void);
 /**
  * @}
  */
@@ -143,79 +148,124 @@ static esp_err_t event_handler(void *ctx, system_event_t *event);
  * @{  
  */
 
-typedef struct 
-{
-    uint8_t Cur_Mode;
-
-}APP_Net_Param_t;
-
-typedef enum
-{
-    Net_Mode_UDP,
-}APP_Net_Mode_e;
-
-APP_Net_Param_t APP_Net_Param = 
-{
-    .Cur_Mode = Net_Mode_UDP
-};
-
 void APP_Net_Init(void)
 {
-    APP_Net_Param.Cur_Mode = g_SystemParam_Config.workingmode;
-
+    // -------load sysparam ---------
+    SystemParam_Read();
+    APP_Net_Param.workingmode = g_SystemParam_Config.workingmode;
+    strcpy(APP_Net_Param.ssid ,g_SystemParam_Config.ssid );
+    strcpy(APP_Net_Param.password ,g_SystemParam_Config.password );
+    APP_Net_Param.dhcp_flag = g_SystemParam_Config.dhcp_flag;
+    APP_Net_Param.DNS = g_SystemParam_Config.DNS;
+    APP_Net_Param.gateway = g_SystemParam_Config.gateway;
+    APP_Net_Param.domainname_flag = g_SystemParam_Config.domainname_flag ;
+    strcpy(APP_Net_Param.domain_name ,g_SystemParam_Config.domain_name );
+    APP_Net_Param.target_ip = g_SystemParam_Config.target_ip;
+    APP_Net_Param.target_port = g_SystemParam_Config.target_port;
+    APP_Net_Param.local_ip = g_SystemParam_Config.local_ip;
+    APP_Net_Param.local_port = g_SystemParam_Config.local_port;
+    APP_Net_Param.local_conf_port = g_SystemParam_Config.local_conf_port;
+    APP_Net_Param.netmask = g_SystemParam_Config.netmask;
+    // ------------------------------
+    // ---- select mode to run ------
+    switch(APP_Net_Param.workingmode)
+    {
+        case WorkingMode_TCP: 
+            {
+                app_net_TCPMode();
+            }
+            break;
+        case WorkingMode_UDP: 
+            {
+                app_net_UDPMode();
+            }
+            break;
+        case WorkingMode_AP: 
+            {
+                app_net_APMode();
+            }
+            break;
+        default:break;
+    }
+    // ------------------------------
     APP_Net_UDP_SendQueue_Init();
-    Net_Task_Event_Start(NET_TASK_STA_EVENT,EVENT_FROM_TASK);
+
 }
 
-void APP_NET_STA(void)
+static void app_net_TCPMode(void)
 {
+    printf("app_net_TCPMode\n");
+    //ESP_ERROR_CHECK(esp_wifi_deinit());
+    app_net_connectAP();
+}
+static void app_net_UDPMode(void)
+{
+    printf("app_net_UDPMode\n");
+    //ESP_ERROR_CHECK(esp_wifi_deinit());
+    app_net_connectAP();
 
+}
+static void app_net_APMode(void)
+{
+    printf("app_net_APMode\n");
+    //ESP_ERROR_CHECK(esp_wifi_deinit());
+    
+}
+
+static void app_net_connectAP(void)
+{
     tcpip_adapter_init(); // TCP/IP Init
-    //ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
-
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
+    // --------- load ap info --------
     wifi_config_t wifi_config = {
         .sta= {
-            .ssid = "Bigym",
-            .password = "1234567890",
+            
         },
     };  
+    strcpy((char *)wifi_config.sta.ssid , APP_Net_Param.ssid);
+    strcpy((char *)wifi_config.sta.password , APP_Net_Param.password);
+ 
+    // ------------------Config IP conf------------------------
+    
+    if(APP_Net_Param.dhcp_flag == DHCP_F_OPEN)
+    {
 
-// ------------------Config IP conf------------------------
+    }
+    else
+    {
+        ESP_ERROR_CHECK(tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA));
 
+        tcpip_adapter_ip_info_t ip_info;
+        ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA , &ip_info));
+        ESP_LOGI(TAG, "ip_info IP:%s" , inet_ntoa(ip_info.ip));
+        ESP_LOGI(TAG, "ip_info Netmask:%s" , inet_ntoa(ip_info.netmask));
+        ESP_LOGI(TAG, "ip_info GW:%s" , inet_ntoa(ip_info.gw));
+
+        memcpy((uint8_t *)&ip_info.ip , (uint8_t *)&APP_Net_Param.local_ip , 4);
+        memcpy((uint8_t *)&ip_info.netmask , (uint8_t *)&APP_Net_Param.netmask , 4);
+        memcpy((uint8_t *)&ip_info.gw , (uint8_t *)&APP_Net_Param.gateway , 4);    
+        ESP_ERROR_CHECK(tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA , &ip_info));
+        ESP_LOGI(TAG, "ip_info SET" );
+
+    }
+    /*
     ESP_ERROR_CHECK(tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA));
     tcpip_adapter_dhcp_status_t dhcp_status;
     ESP_ERROR_CHECK( tcpip_adapter_dhcpc_get_status(TCPIP_ADAPTER_IF_STA, &dhcp_status));
     ESP_LOGI(TAG, "ip_info Dhcp c:      %d" , (uint8_t) dhcp_status); 
+    */
 
-    tcpip_adapter_ip_info_t ip_info;
+
+    /*
     ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA , &ip_info));
     ESP_LOGI(TAG, "ip_info IP:%s" , inet_ntoa(ip_info.ip));
     ESP_LOGI(TAG, "ip_info Netmask:%s" , inet_ntoa(ip_info.netmask));
     ESP_LOGI(TAG, "ip_info GW:%s" , inet_ntoa(ip_info.gw));
-
-    uint32_t ipinfo_temp = 0;
-    ipinfo_temp = inet_addr("192.168.2.200");
-    ESP_LOGI(TAG, "ip_info ip:%x" , ipinfo_temp );
-    memcpy((uint8_t *)&ip_info.ip , (uint8_t *)&ipinfo_temp , 4);
-    ipinfo_temp = inet_addr("255.255.255.0");
-    ESP_LOGI(TAG, "ip_info netmask:%x" , ipinfo_temp );
-    memcpy((uint8_t *)&ip_info.netmask , (uint8_t *)&ipinfo_temp , 4);
-    ipinfo_temp = inet_addr("192.168.2.1");
-    ESP_LOGI(TAG, "ip_info gw:%x" , ipinfo_temp );
-    memcpy((uint8_t *)&ip_info.gw , (uint8_t *)&ipinfo_temp , 4);    
-
-    ESP_ERROR_CHECK(tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA , &ip_info));
-    ESP_LOGI(TAG, "ip_info SET" );
-    ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA , &ip_info));
-    ESP_LOGI(TAG, "ip_info IP:%s" , inet_ntoa(ip_info.ip));
-    ESP_LOGI(TAG, "ip_info Netmask:%s" , inet_ntoa(ip_info.netmask));
-    ESP_LOGI(TAG, "ip_info GW:%s" , inet_ntoa(ip_info.gw));
-
-// --------------------------------------------------------
+    */
+    // --------------------------------------------------------
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
@@ -239,7 +289,22 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
             break;
         case SYSTEM_EVENT_STA_GOT_IP:
 
-            Net_Task_Event_Start(NET_TASK_UDP_EVENT,EVENT_FROM_TASK);
+            switch(APP_Net_Param.workingmode)
+            {
+                case WorkingMode_TCP: 
+                {
+                    Net_Task_Event_Start(NET_TASK_TCP_EVENT,EVENT_FROM_TASK);
+                }
+                break;
+                case WorkingMode_UDP: 
+                {
+                    Net_Task_Event_Start(NET_TASK_UDP_EVENT,EVENT_FROM_TASK);
+                }
+                break;
+                default:break;
+            }
+            
+            
             ESP_LOGE(TAG, "SYSTEM_EVENT_STA_GOT_IP");
             break;
         case SYSTEM_EVENT_STA_DISCONNECTED:
@@ -256,10 +321,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     return ESP_OK;
 }
 
-
-
-
-void APP_Net_UDPProcess(void)
+void APP_Net_TCPProcess(void)
 {
     /*
     SOCK_DGRAM - > UDP
@@ -279,9 +341,87 @@ void APP_Net_UDPProcess(void)
     tcpip_adapter_ip_info_t ip_info;
     ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA , &ip_info));
 
-    ESP_LOGI(TAG, "ip_info IPx:      %X" , *(uint32_t *)(&ip_info.ip));
-    ESP_LOGI(TAG, "ip_info Netmaskx: %X" , *(uint32_t *)(&ip_info.netmask));
-    ESP_LOGI(TAG, "ip_info GWx:      %X" , *(uint32_t *)(&ip_info.gw));
+    ESP_LOGI(TAG, "ip_info IP:      %s" , inet_ntoa(ip_info.ip));
+    ESP_LOGI(TAG, "ip_info Netmask: %s" , inet_ntoa(ip_info.netmask));
+    ESP_LOGI(TAG, "ip_info GW:      %s" , inet_ntoa(ip_info.gw));
+
+    tcpip_adapter_dns_info_t dns;
+
+    memcpy((uint8_t *)&dns.ip ,(uint8_t *)&APP_Net_Param.DNS , 4  );
+    ESP_ERROR_CHECK( tcpip_adapter_set_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN, &dns));
+    ESP_ERROR_CHECK( tcpip_adapter_get_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN, &dns));
+    ESP_LOGI(TAG, "ip_info DNS:      %s" , inet_ntoa(dns.ip));   
+
+
+
+
+// -----------------------------------------------------------
+    // -------SOCKET CONF-------
+    sock[SOCKET_CONF] = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+
+    struct sockaddr_in local_addr;
+    //local_addr.sin_addr.s_addr = inet_addr("192.168.2.200");
+    memcpy((uint8_t * )&local_addr.sin_addr.s_addr , (uint8_t *)&ip_info.ip , 4);
+    local_addr.sin_family = AF_INET;
+    local_addr.sin_port = htons(APP_Net_Param.local_conf_port);
+    int err = bind(sock[SOCKET_CONF], (struct sockaddr *)&local_addr, sizeof(local_addr));
+
+
+    // -------SOCKET SEND-------
+    sock[SOCKET_SEND] = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    if(APP_Net_Param.local_port > 10000)
+    {
+
+        memcpy((uint8_t * )&local_addr.sin_addr.s_addr , (uint8_t *)&ip_info.ip , 4);
+        local_addr.sin_family = AF_INET;
+        local_addr.sin_port = htons(APP_Net_Param.local_port);
+        int err = bind(sock[SOCKET_SEND], (struct sockaddr *)&local_addr, sizeof(local_addr));        
+    }
+
+
+    // -------------------------
+    if (sock[SOCKET_SEND] == -1) 
+    {
+        ESP_LOGE(TAG, "Shutting down socket and restarting...");
+        shutdown(sock[SOCKET_SEND], 0);
+        close(sock[SOCKET_SEND]);
+    }
+    else
+    {
+        struct sockaddr_in dest_addr;
+        //dest_addr.sin_addr.s_addr = inet_addr(HOST_IP_ADDR);
+        memcpy((uint8_t * )&dest_addr.sin_addr.s_addr , (uint8_t *)&APP_Net_Param.target_ip , 4);
+        dest_addr.sin_family = AF_INET;
+        dest_addr.sin_port = htons(APP_Net_Param.target_port);
+        int err = connect(sock[SOCKET_SEND], (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+        if (err != 0) {
+            ESP_LOGE(TAG, "Socket unable to connect: errno %d", errno);
+        }
+
+        DEBUG("Socket SNED:%d OK!\n" , sock[SOCKET_SEND]);
+    }
+
+}
+
+
+void APP_Net_UDPProcess(void)
+{
+    /*
+    SOCK_DGRAM - > UDP
+    SOCK_STREAM - > TCP
+    */
+
+    //char addr_str[128];
+
+    // struct sockaddr_in dest_addr;
+    // dest_addr.sin_addr.s_addr = inet_addr("192.168.2.100");
+    // dest_addr.sin_family = AF_INET;
+    // dest_addr.sin_port = htons(20000);
+
+    //inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
+//-----------------------ip Info Log----------------------------
+    tcpip_adapter_ip_info_t ip_info;
+    ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA , &ip_info));
 
     ESP_LOGI(TAG, "ip_info IP:      %s" , inet_ntoa(ip_info.ip));
     ESP_LOGI(TAG, "ip_info Netmask: %s" , inet_ntoa(ip_info.netmask));
@@ -289,32 +429,35 @@ void APP_Net_UDPProcess(void)
 
     tcpip_adapter_dns_info_t dns;
 
-    ESP_ERROR_CHECK( tcpip_adapter_get_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN, &dns));
-    ESP_LOGI(TAG, "ip_info DNSx:      %X" , *(uint32_t *)(&dns.ip));
-    ESP_LOGI(TAG, "ip_info DNS:      %s" , inet_ntoa(dns.ip));
-    uint32_t dns_test = 0x08080808;
-    memcpy((uint8_t *)&dns.ip ,(uint8_t *)&dns_test , 4  );
+    memcpy((uint8_t *)&dns.ip ,(uint8_t *)&APP_Net_Param.DNS , 4  );
     ESP_ERROR_CHECK( tcpip_adapter_set_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN, &dns));
-
     ESP_ERROR_CHECK( tcpip_adapter_get_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN, &dns));
-    ESP_LOGI(TAG, "ip_info DNSx:      %X" , *(uint32_t *)(&dns.ip));
     ESP_LOGI(TAG, "ip_info DNS:      %s" , inet_ntoa(dns.ip));   
 
-    tcpip_adapter_dhcp_status_t dhcp_status;
-    ESP_ERROR_CHECK( tcpip_adapter_dhcpc_get_status(TCPIP_ADAPTER_IF_STA, &dhcp_status));
-    ESP_LOGI(TAG, "ip_info Dhcp c:      %d" , (uint8_t) dhcp_status); 
+
+
 
 // -----------------------------------------------------------
     // -------SOCKET CONF-------
     sock[SOCKET_CONF] = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
     struct sockaddr_in local_addr;
-    local_addr.sin_addr.s_addr = inet_addr("192.168.2.200");
+    //local_addr.sin_addr.s_addr = inet_addr("192.168.2.200");
+    memcpy((uint8_t * )&local_addr.sin_addr.s_addr , (uint8_t *)&ip_info.ip , 4);
     local_addr.sin_family = AF_INET;
-    local_addr.sin_port = htons(SOCKET_CONF_PORT);
+    local_addr.sin_port = htons(APP_Net_Param.local_conf_port);
     int err = bind(sock[SOCKET_CONF], (struct sockaddr *)&local_addr, sizeof(local_addr));
     // -------SOCKET SEND-------
     sock[SOCKET_SEND] = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if(APP_Net_Param.local_port > 10000)
+    {
+        memcpy((uint8_t * )&local_addr.sin_addr.s_addr , (uint8_t *)&ip_info.ip , 4);
+        local_addr.sin_family = AF_INET;
+        local_addr.sin_port = htons(APP_Net_Param.local_port);
+        int err = bind(sock[SOCKET_SEND], (struct sockaddr *)&local_addr, sizeof(local_addr));        
+    }
+
+
     // -------------------------
     if (sock[SOCKET_SEND] == -1) 
     {
@@ -396,8 +539,6 @@ void APP_Net_UDP_RevProcess(void)
     }
     free(data);
 }
-
-
 
 
 void APP_Net_UDP_SendQueue_Init(void)
