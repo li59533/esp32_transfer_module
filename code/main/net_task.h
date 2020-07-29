@@ -36,6 +36,7 @@
 #define NET_TASK_UDP_EVENT              (0x01 << 4)
 #define NET_TASK_UDP_SEND_EVENT         (0X01 << 5)
 
+#define NET_TASK_WEB_EVENT              (0X01 << 6)
 /**
  * @}
  */

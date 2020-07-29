@@ -29,9 +29,15 @@
 #include "lwip/sys.h"
 #include <lwip/netdb.h>
 
+#include "esp_vfs.h"
+#include "esp_spiffs.h"
+#include "esp_http_server.h"
+
+
+
 #include "net_task.h"
 #include "rtos_tools.h"
-
+#include "app_web.h"
 /**
  * @addtogroup    app_net_Modules 
  * @{  
@@ -189,7 +195,6 @@ void APP_Net_Init(void)
     }
     // ------------------------------
     APP_Net_UDP_SendQueue_Init();
-
 }
 
 static void app_net_TCPMode(void)
@@ -274,7 +279,10 @@ static void app_net_connectAP(void)
 
     ESP_LOGI(TAG, "wifi_init_sta finished.");
     ESP_LOGI(TAG, "connect to ap SSID:%s password:%s \n",\
-             wifi_config.ap.ssid, wifi_config.ap.password);   
+             wifi_config.ap.ssid, wifi_config.ap.password);  
+
+
+    
 }
 
 
@@ -285,7 +293,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     switch (event->event_id) {
         case SYSTEM_EVENT_STA_START:
             ESP_LOGE(TAG, "SYSTEM_EVENT_STA_START");
-
+            Net_Task_Event_Start(NET_TASK_WEB_EVENT,EVENT_FROM_TASK);
             break;
         case SYSTEM_EVENT_STA_GOT_IP:
 
@@ -540,7 +548,7 @@ void APP_Net_UDP_RevProcess(void)
     free(data);
 }
 
-
+// ------------- SEND Func----------------------------
 void APP_Net_UDP_SendQueue_Init(void)
 {
     APP_Net_UDPSendQueue[0].buf = app_net_udpsend_space;

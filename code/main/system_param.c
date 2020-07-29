@@ -101,7 +101,7 @@ nvs_handle_t nvs_sys_handle;
 static SystemParam_Config_t SystemParam_Config_Default = 
 {
 
-    .workingmode = WorkingMode_TCP,
+    .workingmode = WorkingMode_UDP,
     .dhcp_flag = DHCP_F_CLOSE,
     .DNS = 0x08080808,
     .gateway = 0x0102a8c0, // 192.168.2.1 0102a8c0

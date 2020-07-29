@@ -1068,3 +1068,6 @@ doc/~$esp32透传_开发计划_20200722.xlsx
 doc/~$p32透传_软件设计_20200714.docx
 code/build/esp-idf/main/CMakeFiles/__idf_main.dir/app_protocol.c.obj
 code/build/esp-idf/main/CMakeFiles/__idf_main.dir/app_protocol.c.obj
+code/build/test.html.S
+code/build/esp-idf/main/CMakeFiles/__idf_main.dir/app_web.c.obj
+code/build/esp-idf/main/CMakeFiles/__idf_main.dir/__/__/test.html.S.obj

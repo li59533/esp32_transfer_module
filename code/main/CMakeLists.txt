@@ -10,5 +10,8 @@ idf_component_register(SRCS "main.c"
                             "uart_task.c"
                             "version.c"
                             "app_protocol.c"
-                    INCLUDE_DIRS "")
+                            "app_web.c"
+                    INCLUDE_DIRS "."
+                    EMBED_FILES "test.html"
+                    )
 

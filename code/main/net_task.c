@@ -23,7 +23,7 @@
  * @{  
  */
 #include "app_net.h"
-
+#include "app_web.h"
 /**
  * @addtogroup    net_task_Modules 
  * @{  
@@ -172,6 +172,7 @@ void Net_Task(void * pvParameter)
 		}		
 		if((event_flag & NET_TASK_INIT_EVENT) != 0x00)
 		{
+            
             APP_Net_Init();
 			DEBUG("Net Task INIT EVENT\r\n");
 
@@ -192,7 +193,14 @@ void Net_Task(void * pvParameter)
             DEBUG("Net Task UDP SEND EVENT\r\n");
             APP_Net_UDPSend_Process();
             
-		}		        
+		}		     
+        if((event_flag & NET_TASK_WEB_EVENT) != 0x00)
+		{
+            DEBUG("Net Task WEB EVENT\r\n");
+            APP_Web_StartServer();
+
+		}		 
+           
 	}
 }
 

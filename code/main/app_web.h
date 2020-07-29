@@ -1,8 +1,8 @@
 /**
  **************************************************************************************************
- * @file        version.h
+ * @file        app_web.h
  * @author
- * @version
+ * @app_web
  * @date        
  * @brief
  **************************************************************************************************
@@ -10,37 +10,22 @@
  *
  **************************************************************************************************
  */
-#ifndef _VERSION_H_
-#define _VERSION_H_
+#ifndef _APP_WEB_H_
+#define _APP_WEB_H_
 
 /**
  * @addtogroup    XXX 
  * @{ 
  */
+#include "esp_err.h"
 #include "self_def.h"
 /**
- * @addtogroup    version_Modules 
+ * @addtogroup    app_web_Modules 
  * @{  
  */
 
 /**
- * @defgroup      version_Exported_Macros 
- * @{  
- */
-#define VERSION_MAJOR		0   // 0~255
-#define VERSION_MINOR		0   // 0~255
-#define VERSION_LITE		7	// 0~255
-
-#define FRAME_VERSION_MAJOR		0   // 0~255
-#define FRAME_VERSION_MINOR		0   // 0~255
-#define FRAME_VERSION_LITE		1	// 0~255
-
-/**
- * @}
- */
-
-/**
- * @defgroup      version_Exported_Constants
+ * @defgroup      app_web_Exported_Macros 
  * @{  
  */
 
@@ -49,7 +34,7 @@
  */
 
 /**
- * @defgroup      version_Exported_Types 
+ * @defgroup      app_web_Exported_Constants
  * @{  
  */
 
@@ -58,7 +43,7 @@
  */
 
 /**
- * @defgroup      version_Exported_Variables  
+ * @defgroup      app_web_Exported_Types 
  * @{  
  */
 
@@ -67,11 +52,23 @@
  */
 
 /**
- * @defgroup      version_Exported_Functions 
+ * @defgroup      app_web_Exported_Variables  
  * @{  
  */
-uint32_t Version_Get_Bin(void);
-char * Version_Get_Str(void);
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup      app_web_Exported_Functions 
+ * @{  
+ */
+esp_err_t APP_Web_StartServer(void);
+
+// ------- Test Code ----------------
+
+// ----------------------------------
 /**
  * @}
  */
