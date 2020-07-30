@@ -152,8 +152,11 @@ void Net_Task(void * pvParameter)
 	DEBUG("Net Task Enter\r\n");
 	UBaseType_t nettask_ramainheap = 0;
 
+    APP_Net_Init();
+
+
     //Net_Task_Event_Start(NET_TASK_TEST2_EVENT,EVENT_FROM_TASK);
-    Net_Task_Event_Start(NET_TASK_INIT_EVENT,EVENT_FROM_TASK);
+    Net_Task_Event_Start(NET_TASK_CHANGE_EVENT,EVENT_FROM_TASK);
 	while(1)
 	{
 		xTaskNotifyWait(0x00,ULONG_MAX,&event_flag , portMAX_DELAY);
@@ -165,15 +168,11 @@ void Net_Task(void * pvParameter)
 			DEBUG("Net Task ramain heap:%d %%\r\n",nettask_ramainheap);
 	
 		}
-		if((event_flag & NET_TASK_TEST2_EVENT) != 0x00)
-		{
-			DEBUG("Net Task NET_TASK_TEST2_EVENT\r\n");
 
-		}		
-		if((event_flag & NET_TASK_INIT_EVENT) != 0x00)
+		if((event_flag & NET_TASK_CHANGE_EVENT) != 0x00)
 		{
             
-            APP_Net_Init();
+            APP_Net_ChangeMode();
 			DEBUG("Net Task INIT EVENT\r\n");
 
 		}				

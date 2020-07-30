@@ -82,6 +82,8 @@ typedef struct
  * @{  
  */
 void APP_Net_Init(void);
+void APP_Net_ChangeMode(void);
+
 void APP_NET_STA(void);
 void APP_Net_TCPProcess(void);
 void APP_Net_UDPProcess(void);

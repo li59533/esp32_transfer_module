@@ -21,7 +21,7 @@
 #include "esp_log.h"
 #include "esp_event.h"
 
-#include "net_task.h"
+
 #include "clog.h"
 
 #include "lwip/err.h"
@@ -71,7 +71,9 @@
  * @brief         
  * @{  
  */
-
+#define EXAMPLE_ESP_WIFI_SSID      "ConfAP"
+#define EXAMPLE_ESP_WIFI_PASS      ""
+#define EXAMPLE_MAX_STA_CONN       3
 /**
  * @}
  */
@@ -91,7 +93,7 @@
  * @brief         
  * @{  
  */
-static const char *TAG = "wifi station";
+static const char *TAG = "WiFi Info";
 
 int sock[SOCKET_NUM_COUNT] = { 0 };
 
@@ -173,6 +175,18 @@ void APP_Net_Init(void)
     APP_Net_Param.local_conf_port = g_SystemParam_Config.local_conf_port;
     APP_Net_Param.netmask = g_SystemParam_Config.netmask;
     // ------------------------------
+
+    // -------- Init Something ------
+    tcpip_adapter_init(); // TCP/IP Init
+    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+    APP_Web_Init_mdns();
+    // ------------------------------
+
+}
+
+
+void APP_Net_ChangeMode(void)
+{
     // ---- select mode to run ------
     switch(APP_Net_Param.workingmode)
     {
@@ -193,34 +207,61 @@ void APP_Net_Init(void)
             break;
         default:break;
     }
-    // ------------------------------
-    APP_Net_UDP_SendQueue_Init();
+    // --------------------------------
 }
+
 
 static void app_net_TCPMode(void)
 {
     printf("app_net_TCPMode\n");
-    //ESP_ERROR_CHECK(esp_wifi_deinit());
+    esp_wifi_deinit();
     app_net_connectAP();
 }
 static void app_net_UDPMode(void)
 {
     printf("app_net_UDPMode\n");
-    //ESP_ERROR_CHECK(esp_wifi_deinit());
+    esp_wifi_deinit();
     app_net_connectAP();
 
 }
 static void app_net_APMode(void)
 {
     printf("app_net_APMode\n");
-    //ESP_ERROR_CHECK(esp_wifi_deinit());
-    
+    esp_wifi_stop();
+    esp_wifi_deinit();
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    wifi_config_t wifi_config = {
+        .ap = {
+            .ssid = EXAMPLE_ESP_WIFI_SSID,
+            .ssid_len = strlen(EXAMPLE_ESP_WIFI_SSID),
+            .password = EXAMPLE_ESP_WIFI_PASS,
+            .max_connection = EXAMPLE_MAX_STA_CONN,
+            .authmode = WIFI_AUTH_WPA_WPA2_PSK
+        },
+    };
+
+    if (strlen(EXAMPLE_ESP_WIFI_PASS) == 0) {
+        wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+    }
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s",
+             EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+
+    Net_Task_Event_Start(NET_TASK_WEB_EVENT,EVENT_FROM_TASK);
 }
 
 static void app_net_connectAP(void)
 {
-    tcpip_adapter_init(); // TCP/IP Init
-    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+    esp_wifi_disconnect();
+    esp_wifi_stop();
+    esp_wifi_deinit();
+
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
@@ -241,7 +282,7 @@ static void app_net_connectAP(void)
     }
     else
     {
-        ESP_ERROR_CHECK(tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA));
+        tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA);
 
         tcpip_adapter_ip_info_t ip_info;
         ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA , &ip_info));
@@ -256,20 +297,7 @@ static void app_net_connectAP(void)
         ESP_LOGI(TAG, "ip_info SET" );
 
     }
-    /*
-    ESP_ERROR_CHECK(tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA));
-    tcpip_adapter_dhcp_status_t dhcp_status;
-    ESP_ERROR_CHECK( tcpip_adapter_dhcpc_get_status(TCPIP_ADAPTER_IF_STA, &dhcp_status));
-    ESP_LOGI(TAG, "ip_info Dhcp c:      %d" , (uint8_t) dhcp_status); 
-    */
 
-
-    /*
-    ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA , &ip_info));
-    ESP_LOGI(TAG, "ip_info IP:%s" , inet_ntoa(ip_info.ip));
-    ESP_LOGI(TAG, "ip_info Netmask:%s" , inet_ntoa(ip_info.netmask));
-    ESP_LOGI(TAG, "ip_info GW:%s" , inet_ntoa(ip_info.gw));
-    */
     // --------------------------------------------------------
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
@@ -291,39 +319,81 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     DEBUG("event->event_id:%d\n" , event->event_id);
     
     switch (event->event_id) {
-        case SYSTEM_EVENT_STA_START:
-            ESP_LOGE(TAG, "SYSTEM_EVENT_STA_START");
-            Net_Task_Event_Start(NET_TASK_WEB_EVENT,EVENT_FROM_TASK);
-            break;
-        case SYSTEM_EVENT_STA_GOT_IP:
-
-            switch(APP_Net_Param.workingmode)
+        case SYSTEM_EVENT_WIFI_READY:
             {
-                case WorkingMode_TCP: 
-                {
-                    Net_Task_Event_Start(NET_TASK_TCP_EVENT,EVENT_FROM_TASK);
-                }
-                break;
-                case WorkingMode_UDP: 
-                {
-                    Net_Task_Event_Start(NET_TASK_UDP_EVENT,EVENT_FROM_TASK);
-                }
-                break;
-                default:break;
+                ESP_LOGE(TAG, "SYSTEM_EVENT_WIFI_READY");
             }
-            
-            
-            ESP_LOGE(TAG, "SYSTEM_EVENT_STA_GOT_IP");
             break;
-        case SYSTEM_EVENT_STA_DISCONNECTED:
-            ESP_LOGE(TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
-            
+        case SYSTEM_EVENT_SCAN_DONE:
+            {
+                ESP_LOGE(TAG, "SYSTEM_EVENT_SCAN_DONE");               
+            }
+            break;
+        case SYSTEM_EVENT_STA_START:
+            {
+                ESP_LOGE(TAG, "SYSTEM_EVENT_STA_START");  
+                Net_Task_Event_Start(NET_TASK_WEB_EVENT,EVENT_FROM_TASK);                              
+            }
+            break;
+        case SYSTEM_EVENT_STA_STOP:
+            {
+                ESP_LOGE(TAG, "SYSTEM_EVENT_STA_STOP");  
+            }
             break;
         case SYSTEM_EVENT_STA_CONNECTED:
-            ESP_LOGE(TAG, "SYSTEM_EVENT_STA_CONNECTED");
+            {
+                ESP_LOGE(TAG, "SYSTEM_EVENT_STA_CONNECTED");
+            }
             break;    
+        case SYSTEM_EVENT_STA_DISCONNECTED:
+            {
+                ESP_LOGE(TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
+                Net_Task_Event_Start(NET_TASK_CHANGE_EVENT,EVENT_FROM_TASK);           
+            }
+            break;            
+        case SYSTEM_EVENT_STA_GOT_IP:
+            {
+                switch(APP_Net_Param.workingmode)
+                {
+                    case WorkingMode_TCP: 
+                    {
+                        Net_Task_Event_Start(NET_TASK_TCP_EVENT,EVENT_FROM_TASK);
+                    }
+                    break;
+                    case WorkingMode_UDP: 
+                    {
+                        Net_Task_Event_Start(NET_TASK_UDP_EVENT,EVENT_FROM_TASK);
+                    }
+                    break;
+                    default:break;
+                }
+                ESP_LOGE(TAG, "SYSTEM_EVENT_STA_GOT_IP");                
+            }
+            break;
+        case SYSTEM_EVENT_AP_START:
+            {
+                ESP_LOGE(TAG, "SYSTEM_EVENT_AP_START");  
+            }
+            break;
+        case SYSTEM_EVENT_AP_STOP:
+            {
+                ESP_LOGE(TAG, "SYSTEM_EVENT_AP_STOP");  
+            }
+            break;
+        case SYSTEM_EVENT_AP_STACONNECTED:
+            {
+                ESP_LOGE(TAG, "SYSTEM_EVENT_AP_STACONNECTED");  
+            }
+            break;
+        case SYSTEM_EVENT_AP_STADISCONNECTED:
+            {
+                ESP_LOGE(TAG, "SYSTEM_EVENT_AP_STADISCONNECTED");                
+            }
+            break;
         default:
-            ESP_LOGE(TAG, "SYSTEM_EVENT_STA_Default");
+            {
+                ESP_LOGE(TAG, "SYSTEM_EVENT__Default");                
+            }
             break;
     }
     return ESP_OK;

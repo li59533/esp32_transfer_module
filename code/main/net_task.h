@@ -29,14 +29,13 @@
  * @{  
  */
 #define NET_TASK_TEST_EVENT 			(0X01 << 0)
-#define NET_TASK_TEST2_EVENT			(0X01 << 1)
 
-#define NET_TASK_INIT_EVENT             (0X01 << 2)
-#define NET_TASK_TCP_EVENT              (0X01 << 3)
-#define NET_TASK_UDP_EVENT              (0x01 << 4)
-#define NET_TASK_UDP_SEND_EVENT         (0X01 << 5)
+#define NET_TASK_CHANGE_EVENT           (0X01 << 1)
+#define NET_TASK_TCP_EVENT              (0X01 << 2)
+#define NET_TASK_UDP_EVENT              (0x01 << 3)
+#define NET_TASK_UDP_SEND_EVENT         (0X01 << 4)
 
-#define NET_TASK_WEB_EVENT              (0X01 << 6)
+#define NET_TASK_WEB_EVENT              (0X01 << 5)
 /**
  * @}
  */

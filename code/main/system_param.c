@@ -100,7 +100,6 @@ nvs_handle_t nvs_sys_handle;
 
 static SystemParam_Config_t SystemParam_Config_Default = 
 {
-
     .workingmode = WorkingMode_UDP,
     .dhcp_flag = DHCP_F_CLOSE,
     .DNS = 0x08080808,

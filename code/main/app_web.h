@@ -64,6 +64,8 @@
  * @defgroup      app_web_Exported_Functions 
  * @{  
  */
+
+void APP_Web_Init_mdns(void);
 esp_err_t APP_Web_StartServer(void);
 
 // ------- Test Code ----------------
