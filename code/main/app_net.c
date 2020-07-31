@@ -159,6 +159,7 @@ static void app_net_connectAP(void);
 void APP_Net_Init(void)
 {
     // -------load sysparam ---------
+    printf("Net init \r\n");
     SystemParam_Read();
     APP_Net_Param.workingmode = g_SystemParam_Config.workingmode;
     strcpy(APP_Net_Param.ssid ,g_SystemParam_Config.ssid );
@@ -177,6 +178,9 @@ void APP_Net_Init(void)
     // ------------------------------
 
     // -------- Init Something ------
+    APP_Net_Param.wifi_status = WiFi_Busy;
+    APP_Net_Param.server_status = Server_Busy;
+
     tcpip_adapter_init(); // TCP/IP Init
     ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
     APP_Web_Init_mdns();
@@ -342,17 +346,20 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
             break;
         case SYSTEM_EVENT_STA_CONNECTED:
             {
+                APP_Net_Param.wifi_status = WiFi_OK;
                 ESP_LOGE(TAG, "SYSTEM_EVENT_STA_CONNECTED");
             }
             break;    
         case SYSTEM_EVENT_STA_DISCONNECTED:
             {
+                APP_Net_Param.wifi_status = WiFi_Err;
                 ESP_LOGE(TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
                 Net_Task_Event_Start(NET_TASK_CHANGE_EVENT,EVENT_FROM_TASK);           
             }
             break;            
         case SYSTEM_EVENT_STA_GOT_IP:
             {
+                
                 switch(APP_Net_Param.workingmode)
                 {
                     case WorkingMode_TCP: 
@@ -405,17 +412,8 @@ void APP_Net_TCPProcess(void)
     SOCK_DGRAM - > UDP
     SOCK_STREAM - > TCP
     */
-
-    //char addr_str[128];
-
-    // struct sockaddr_in dest_addr;
-    // dest_addr.sin_addr.s_addr = inet_addr("192.168.2.100");
-    // dest_addr.sin_family = AF_INET;
-    // dest_addr.sin_port = htons(20000);
-
-
-    //inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
-//-----------------------ip Info Log----------------------------
+    int err ;
+    //-----------------------ip Info Log----------------------------
     tcpip_adapter_ip_info_t ip_info;
     ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA , &ip_info));
 
@@ -429,22 +427,16 @@ void APP_Net_TCPProcess(void)
     ESP_ERROR_CHECK( tcpip_adapter_set_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN, &dns));
     ESP_ERROR_CHECK( tcpip_adapter_get_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN, &dns));
     ESP_LOGI(TAG, "ip_info DNS:      %s" , inet_ntoa(dns.ip));   
-
-
-
-
-// -----------------------------------------------------------
+    
+    // -----------------------------------------------------------
     // -------SOCKET CONF-------
     sock[SOCKET_CONF] = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
     struct sockaddr_in local_addr;
-    //local_addr.sin_addr.s_addr = inet_addr("192.168.2.200");
     memcpy((uint8_t * )&local_addr.sin_addr.s_addr , (uint8_t *)&ip_info.ip , 4);
     local_addr.sin_family = AF_INET;
     local_addr.sin_port = htons(APP_Net_Param.local_conf_port);
-    int err = bind(sock[SOCKET_CONF], (struct sockaddr *)&local_addr, sizeof(local_addr));
-
-
+    err = bind(sock[SOCKET_CONF], (struct sockaddr *)&local_addr, sizeof(local_addr));
     // -------SOCKET SEND-------
     sock[SOCKET_SEND] = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if(APP_Net_Param.local_port > 10000)
@@ -453,7 +445,7 @@ void APP_Net_TCPProcess(void)
         memcpy((uint8_t * )&local_addr.sin_addr.s_addr , (uint8_t *)&ip_info.ip , 4);
         local_addr.sin_family = AF_INET;
         local_addr.sin_port = htons(APP_Net_Param.local_port);
-        int err = bind(sock[SOCKET_SEND], (struct sockaddr *)&local_addr, sizeof(local_addr));        
+        err = bind(sock[SOCKET_SEND], (struct sockaddr *)&local_addr, sizeof(local_addr));        
     }
 
 
@@ -467,16 +459,38 @@ void APP_Net_TCPProcess(void)
     else
     {
         struct sockaddr_in dest_addr;
-        //dest_addr.sin_addr.s_addr = inet_addr(HOST_IP_ADDR);
         memcpy((uint8_t * )&dest_addr.sin_addr.s_addr , (uint8_t *)&APP_Net_Param.target_ip , 4);
         dest_addr.sin_family = AF_INET;
         dest_addr.sin_port = htons(APP_Net_Param.target_port);
-        int err = connect(sock[SOCKET_SEND], (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-        if (err != 0) {
+        err = connect(sock[SOCKET_SEND], (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+        
+        uint8_t reconnect_count = 0;
+        while(err != 0 )
+        {
+            
+            reconnect_count ++;
+            RTOS_Delay_ms(1000);
             ESP_LOGE(TAG, "Socket unable to connect: errno %d", errno);
+            err = connect(sock[SOCKET_SEND], (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+            
+            if(reconnect_count >= 100)
+            {
+                APP_Net_Param.server_status = Server_Err;
+                break;
+            }
+
         }
 
-        DEBUG("Socket SNED:%d OK!\n" , sock[SOCKET_SEND]);
+        if (err != 0) {
+            
+
+
+        }
+        else
+        {
+            APP_Net_Param.server_status = Server_OK;
+            DEBUG("Socket SNED:%d OK!\n" , sock[SOCKET_SEND]);
+        }
     }
 
 }
@@ -730,8 +744,6 @@ void APP_Net_UDP_TestCode(void)
     }
     
 }
-
-
 
 // -------------------------------------
 

@@ -13,6 +13,7 @@
 #include "self_def.h"
 #include "system_param.h"
 #include "app_protocol.h"
+#include "esp_log.h"
 /**
  * @addtogroup    XXX 
  * @{  
@@ -85,6 +86,8 @@ const char sys_default_domainname[] = "none";
  * @brief         
  * @{  
  */
+static const char *TAG = "System Param";
+
 
 /**
  * @}
@@ -100,12 +103,12 @@ nvs_handle_t nvs_sys_handle;
 
 static SystemParam_Config_t SystemParam_Config_Default = 
 {
-    .workingmode = WorkingMode_UDP,
+    .workingmode = WorkingMode_TCP,
     .dhcp_flag = DHCP_F_CLOSE,
     .DNS = 0x08080808,
     .gateway = 0x0102a8c0, // 192.168.2.1 0102a8c0
     .domainname_flag = DOMAIN_F_CLOSE,
-    .target_ip = 0x6502a8c0, // 192.168.2.102
+    .target_ip = 0x0602a8c0, // 192.168.2.6
     .target_port = 20000 , 
     .local_ip = 0xc802a8c0 , //192.168.2.200
     .local_port = 0, // random port if value equal 0
@@ -164,17 +167,17 @@ int16_t SystemParam_Read(void)
 {
     esp_err_t err ; 
     // Open
-    printf("\n");
-    printf("Opening Non-Volatile Storage (NVS) handle... \n");
+    ESP_LOGI(TAG, "Opening Non-Volatile Storage (NVS) handle...");
+    //printf("Opening Non-Volatile Storage (NVS) handle... \n");
     err = nvs_open("storage", NVS_READWRITE, &nvs_sys_handle);
     if (err != ESP_OK) 
     {
-        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+        ESP_LOGI(TAG , "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
     } 
     else 
     {
         // Read
-        printf("Reading System from NVS ...\n");
+        ESP_LOGI(TAG ,"Reading System from NVS ...\n");
 
         size_t length = 0;
         // ---------- workingmode ----------
@@ -191,7 +194,7 @@ int16_t SystemParam_Read(void)
             err = nvs_get_str(nvs_sys_handle, storage_name_ssid , g_SystemParam_Config.ssid, &length);
             g_SystemParam_Config.ssid[length] = 0;
         }
-        printf("ssid err:%d\n" , err);
+        //printf("ssid err:%d\n" , err);
         // ---------------------------------
         // ----------- password ------------
         err = nvs_get_str(nvs_sys_handle, storage_name_password , NULL, &length);
@@ -204,26 +207,26 @@ int16_t SystemParam_Read(void)
             err = nvs_get_str(nvs_sys_handle, storage_name_password , g_SystemParam_Config.password, &length);
             g_SystemParam_Config.password[length] = 0;
         }
-        printf("password err:%d\n" , err);
+        //printf("password err:%d\n" , err);
         // ---------------------------------
         // ----------- dhcp flag -----------
         err = nvs_get_u8(nvs_sys_handle, storage_name_dhcp_flag, &g_SystemParam_Config.dhcp_flag);
-        printf("dhcp err:%d\n" , err);
+        //printf("dhcp err:%d\n" , err);
         // ---------------------------------
         // ----------- DNS -----------------
         err = nvs_get_u32(nvs_sys_handle, storage_name_DNS, &g_SystemParam_Config.DNS);
-        printf("dns err:%d\n" , err);
+        //printf("dns err:%d\n" , err);
         // ---------------------------------
         // ----------- gateway -------------
         err = nvs_get_u32(nvs_sys_handle, storage_name_gateway, &g_SystemParam_Config.gateway);
-        printf("gateway err:%d\n" , err);
+        //printf("gateway err:%d\n" , err);
         // ---------------------------------
         // ----------- domainname flag------
         err = nvs_get_u8(nvs_sys_handle, storage_name_domainname_flag, &g_SystemParam_Config.domainname_flag);
-        printf("domainname flag err:%d\n" , err);
+        //printf("domainname flag err:%d\n" , err);
         // ---------------------------------
         // ----------- domain name ---------
-        err = nvs_get_str(nvs_sys_handle, storage_name_domain_name , NULL, &length);
+        //err = nvs_get_str(nvs_sys_handle, storage_name_domain_name , NULL, &length);
         if(length >= SYS_PASSWORD_MAX)
         {
             err = ESP_ERR_NVS_NOT_FOUND;
@@ -233,60 +236,62 @@ int16_t SystemParam_Read(void)
             err = nvs_get_str(nvs_sys_handle, storage_name_domain_name , g_SystemParam_Config.domain_name, &length);
             g_SystemParam_Config.domain_name[length] = 0;
         }
-        printf("domain name err:%d\n" , err);
+        //printf("domain name err:%d\n" , err);
         // ---------------------------------
         // ----------- target_ip -----------
         err = nvs_get_u32(nvs_sys_handle, storage_name_target_ip, &g_SystemParam_Config.target_ip);
-        printf("target ip err:%d\n" , err);
+        //printf("target ip err:%d\n" , err);
         // ---------------------------------
         // ----------- target port ---------
         err = nvs_get_u16(nvs_sys_handle, storage_name_target_port, &g_SystemParam_Config.target_port);
-        printf("target port err:%d\n" , err);
+        //printf("target port err:%d\n" , err);
         // ---------------------------------
         // ----------- local ip ------------
         err = nvs_get_u32(nvs_sys_handle, storage_name_local_ip, &g_SystemParam_Config.local_ip);
-        printf("local ip err:%d\n" , err);
+        //printf("local ip err:%d\n" , err);
         // ---------------------------------
         // ----------- local port ----------
         err = nvs_get_u16(nvs_sys_handle, storage_name_local_port, &g_SystemParam_Config.local_port);
-        printf("local port err:%d\n" , err);
+        //printf("local port err:%d\n" , err);
         // ---------------------------------
         // ----------- local conf port -----
         err = nvs_get_u16(nvs_sys_handle, storage_name_local_conf_port, &g_SystemParam_Config.local_conf_port);
-        printf("local conf port err:%d\n" , err);
+        //printf("local conf port err:%d\n" , err);
         // ---------------------------------
         // ----------- netmask -------------
         err = nvs_get_u32(nvs_sys_handle, storage_name_netmask, &g_SystemParam_Config.netmask);
-        printf("netmask err:%d\n" , err);
+        //printf("netmask err:%d\n" , err);
         // ---------------------------------
+
         nvs_close(nvs_sys_handle);
 
 
         switch (err) {
             case ESP_OK:
-
-                printf("workingmode: %x\n" , g_SystemParam_Config.workingmode);
-                printf("ssid:%s\n" , g_SystemParam_Config.ssid);
-                printf("password:%s\n" , g_SystemParam_Config.password);
-                printf("dhcp_flag:%x\n" , g_SystemParam_Config.dhcp_flag);
-                printf("dns:%x\n" , g_SystemParam_Config.DNS);
-                printf("gateway:%x\n" , g_SystemParam_Config.gateway);    
-                printf("demainname_flag:%x\n" , g_SystemParam_Config.domainname_flag);            
-                printf("domain_name:%s\n" , g_SystemParam_Config.domain_name);  
-                printf("target ip:%x\n" , g_SystemParam_Config.target_ip);
-                printf("target port:%d\n" , g_SystemParam_Config.target_port);
-                printf("local ip :%x\n" , g_SystemParam_Config.local_ip);
-                printf("local port:%d\n" , g_SystemParam_Config.local_port);
-                printf("local conf port:%d\n" ,g_SystemParam_Config.local_conf_port );
-                printf("netmask :%x\n" ,g_SystemParam_Config.netmask );
-                printf("Read System OK\n");
+                ESP_LOGI(TAG ,"Read System OK\n");
+                ESP_LOGI(TAG ,"workingmode: %x\n" , g_SystemParam_Config.workingmode);
+                ESP_LOGI(TAG ,"ssid:%s\n" , g_SystemParam_Config.ssid);
+                ESP_LOGI(TAG ,"password:%s\n" , g_SystemParam_Config.password);
+                ESP_LOGI(TAG ,"dhcp_flag:%x\n" , g_SystemParam_Config.dhcp_flag);
+                ESP_LOGI(TAG ,"dns:%x\n" , g_SystemParam_Config.DNS);
+                ESP_LOGI(TAG ,"gateway:%x\n" , g_SystemParam_Config.gateway);    
+                ESP_LOGI(TAG ,"demainname_flag:%x\n" , g_SystemParam_Config.domainname_flag);            
+                ESP_LOGI(TAG ,"domain_name:%s\n" , g_SystemParam_Config.domain_name);  
+                ESP_LOGI(TAG ,"target ip:%x\n" , g_SystemParam_Config.target_ip);
+                ESP_LOGI(TAG ,"target port:%d\n" , g_SystemParam_Config.target_port);
+                ESP_LOGI(TAG ,"local ip :%x\n" , g_SystemParam_Config.local_ip);
+                ESP_LOGI(TAG ,"local port:%d\n" , g_SystemParam_Config.local_port);
+                ESP_LOGI(TAG ,"local conf port:%d\n" ,g_SystemParam_Config.local_conf_port );
+                ESP_LOGI(TAG ,"netmask :%x\n" ,g_SystemParam_Config.netmask );
+                
                 break;
             case ESP_ERR_NVS_NOT_FOUND:
-                printf("Read System Err!NOT_FOUND\n");
+                ESP_LOGI(TAG ,"Read System Err!NOT_FOUND\n");
                 SystemParam_Rest();
                 break;
             default :
-                printf("Read System Err!!\n");
+                ESP_LOGI(TAG ,"Read System Err!!\n");
+                break;
         }
         // Close
         
@@ -300,11 +305,11 @@ void SystemParam_Rest(void)
     err = nvs_open("storage", NVS_READWRITE, &nvs_sys_handle);
     if (err != ESP_OK) 
     {
-        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+        ESP_LOGI(TAG ,"Error (%s) opening NVS handle!\n", esp_err_to_name(err));
     }
     else
     {        
-        printf("Rest SystemParam in NVS ... \n");
+        ESP_LOGI(TAG ,"Rest SystemParam in NVS ... \n");
         memcpy(SystemParam_Config_Default.ssid , sys_default_ssid , strlen(sys_default_ssid));
         memcpy(SystemParam_Config_Default.password , sys_default_password , strlen(sys_default_password));
         memcpy(SystemParam_Config_Default.domain_name , sys_default_domainname , strlen(sys_default_domainname));
@@ -359,7 +364,7 @@ void SystemParam_Rest(void)
         // After setting any values, nvs_commit() must be called to ensure changes are written
         // to flash storage. Implementations may write to storage at other times,
         // but this is not guaranteed.
-        printf("Committing updates in NVS ... \n");
+        ESP_LOGI(TAG ,"Committing updates in NVS ... \n");
         err = nvs_commit(nvs_sys_handle);
         printf((err != ESP_OK) ? "Failed!\n" : "Done\n");  
 
@@ -378,12 +383,12 @@ void SystemParam_Save(void)
     err = nvs_open("storage", NVS_READWRITE, &nvs_sys_handle);
     if (err != ESP_OK) 
     {
-        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+        ESP_LOGE(TAG ,"Error (%s) opening NVS handle!\n", esp_err_to_name(err));
     } 
     else 
     {
         // Write
-        printf("Write SystemParam in NVS ... ");
+        ESP_LOGD(TAG ,"Write SystemParam in NVS ... ");
 
         // ----------- write -----------
         // 
@@ -429,14 +434,11 @@ void SystemParam_Save(void)
         // ---------- netmask -----------
         err = nvs_set_u32(nvs_sys_handle, storage_name_netmask, g_SystemParam_Config.netmask);
         // ------------------------------
-
-        printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
-
         // Commit written value.
         // After setting any values, nvs_commit() must be called to ensure changes are written
         // to flash storage. Implementations may write to storage at other times,
         // but this is not guaranteed.
-        printf("Committing updates in NVS ... \n");
+        ESP_LOGD(TAG ,"Committing updates in NVS ... \n");
         err = nvs_commit(nvs_sys_handle);
         printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
 

@@ -114,6 +114,19 @@ typedef enum
     CONF_FAIL = 0X01,
 }APP_Protocol_Confstatus_e;
 
+typedef enum
+{
+    WiFi_OK = 0x01 , 
+    WiFi_Busy,
+    WiFi_Err ,
+}APP_Protocol_NetWiFi_status_e;
+
+typedef enum
+{
+    Server_OK = 0x01,
+    Server_Busy , 
+    Server_Err ,
+}APP_Protocol_NetServer_status_e;
 
 typedef enum
 {

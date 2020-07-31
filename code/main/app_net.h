@@ -63,6 +63,10 @@ typedef struct
     uint16_t local_port;
     uint16_t local_conf_port;
     uint32_t netmask;
+
+    uint8_t wifi_status;
+    uint8_t server_status;
+
 }APP_Net_Param_t;
 /**
  * @}
